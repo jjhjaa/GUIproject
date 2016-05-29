@@ -3,8 +3,19 @@ from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition, SlideT
 from kivy.uix.tabbedpanel import TabbedPanel
 from kivy.properties import StringProperty
 from kivy.uix.textinput import TextInput
+import MySQLdb
 import os
 
+#  Luodaan yhteys SQL tietokantaan
+
+db = MySQLdb.connect(host="Localhost",
+                     user="root",
+                     passwd="",
+                     db="housedb")
+
+##   Nimetaan cursori kaytettavaampaan muotoon
+
+query = db.cursor()
 
 class Connected(Screen):
     def disconnect(self):
@@ -12,6 +23,8 @@ class Connected(Screen):
         self.manager.current = 'login'
         self.manager.get_screen('login').resetForm()
 
+
+#  Kivy vaatii luokan textinputille seka screenmanagementille joilla myohemmin hallinnoidaan Screeneja seka textinputtien dataa
 
 class TextInput(TextInput):
     pass
@@ -21,8 +34,7 @@ class ScreenManagement(ScreenManager):
     pass
 
 
-
-
+#  Kirjautumis Screeni haetaan kivun puolelta textinputteihin tullut data ja tarkistetaan SQL tietokannasta kyselylla matchaako tiedot
 
 class Login(Screen):
 
@@ -32,22 +44,25 @@ class Login(Screen):
         app.username = loginText
         app.password = passwordText
 
-        if loginText == "admin" and passwordText == "admin":
-            self.manager.transition = SlideTransition(direction="left")
-            self.manager.current = 'adminpanel'
-        elif loginText == "oispa" and passwordText == "kaljaa":
+        if(query.execute("SELECT * FROM `USERS` WHERE `username`='" + app.username + "' AND `password`='" + app.password + "'")):
+            db.commit()
             self.manager.transition = SlideTransition(direction="left")
             self.manager.current = 'connected'
+        elif loginText == "admin" and passwordText == "admin":
+            self.manager.transition = SlideTransition(direction="left")
+            self.manager.current = 'adminpanel'
         else:
-
             app.config.read(app.get_application_config())
             app.config.write()
+
+    #  ylhaalla kaytetaan resetFormia jolla tyhjataan syottokentat
 
     def resetForm(self):
         self.ids['login'].text = ""
         self.ids['password'].text = ""
 
 
+# Luodaan luokat jokaiselle Screenille erikseen ja asetetaan toivottuja parametreja
 class Koti(Screen):
     def koti(self):
         self.manager.transition = SlideTransition(direction="right")
@@ -55,9 +70,16 @@ class Koti(Screen):
         self.manager.get_screen('koti')
 
 
+class Huvila(Screen, TabbedPanel):
+    def huvila(self):
+        self.manager.transition = SlideTransition(direction="right")
+        self.manager.current = 'huvila'
+        self.manager.get_screen('huvila')
+
+
 class Makuuhuone(Screen, TabbedPanel):
     def makuuhuone(self):
-        self.manager.transition = SlideTransition(direction="left")
+        self.manager.transition = SlideTransition(direction="right")
         self.manager.current = 'makuuhuone'
         self.manager.get_screen('makuuhuone')
 
@@ -73,13 +95,57 @@ class Adminpanel(Screen):
     def adminpanel(self):
         self.manager.transition = FadeTransition
         self.manager.current = 'adminpanel'
-        self.managet.get_screen('adminpanel')
+        self.manager.get_screen('adminpanel')
 
+#  Luodaan luokka uuden kayttajan syottamisella, kivy puolella kutsutaan do_insert luokkaa joka kayttaa SQL kyselya textinputista saatujen tietojen siirtamiseen tietkantaan
+class Insert(Screen):
+    def do_insert(self, do_username, do_password):
+
+        try:
+            query.execute("INSERT INTO `users`(`username`, `password`) VALUES ('{}','{}')".format(do_username, do_password))
+            db.commit()
+            self.resetForm()
+
+        except MySQLdb.Error as e:
+            print("Error {}".format(e))
+
+    def resetForm(self):
+        self.ids['username'].text = ""
+        self.ids['password'].text = ""
+
+# Luodaan luokka salasanan vaihdolle, kivy puolelta kutsutaan do_change metodia joka pyorayttaa taas SQL kyselyn salasanan paivittamiselle, mikali username on oikein.
+class Changepw(Screen):
+    def do_change(self, do_username, do_newpassword):
+
+        try:
+            print(do_newpassword)
+            query.execute("UPDATE `users` SET `password`=('{}') WHERE `username`=('{}')".format(do_newpassword, do_username))
+            db.commit()
+            self.resetForm()
+
+        except MySQLdb.Error as e:
+            print("Error {}".format(e))
+
+
+    def resetForm(self):
+        self.ids['username'].text = ""
+        self.ids['newpassword'].text = ""
+
+
+        self.manager.transition = SlideTransition(direction="left")
+        self.manager.current = 'changepw'
+        self.manager.get_screen('changepw')
+
+# Luodaan loginappi joka alustaa login id:den ominaisuuden
 
 class LoginApp(App):
     username = StringProperty(None)
     password = StringProperty(None)
+    do_username = StringProperty(None)
+    do_password = StringProperty(None)
+    do_newpassword = StringProperty(None)
 
+#  metodi widgeteille ja screenmanagerille, joka tarvitaan kivy puolen toimintaan mennessa screenista toiseen.
     def build(self):
         manager = ScreenManager()
 
@@ -89,7 +155,9 @@ class LoginApp(App):
         manager.add_widget(Makuuhuone(name='makuuhuone'))
         manager.add_widget(Olohuone(name='olohuone'))
         manager.add_widget(Adminpanel(name='adminpanel'))
-
+        manager.add_widget(Huvila(name="huvila"))
+        manager.add_widget(Insert(name="insert"))
+        manager.add_widget(Changepw(name="changepw"))
 
         return manager
 

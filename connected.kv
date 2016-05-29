@@ -5,6 +5,9 @@ ScreenManagement:
     Olohuone:
     Makuuhuone:
     Adminpanel:
+    Huvila:
+    Insert:
+    Changepw:
 
 
 <Connected>:
@@ -15,6 +18,11 @@ ScreenManagement:
             text: "You are now connected"
             font_size: 32
             color: 0,1,0,1
+
+        Button:
+            text: "Huvila"
+            font_size:24
+            on_press: app.root.current = "huvila"
         
         Button:
             text: "Home"
@@ -59,8 +67,31 @@ ScreenManagement:
             on_press: app.root.current = "connected"
             
             
+<Huvila>
+    name: "huvila"
+    do_default_tab: False
+    TabbedPanelItem:
 
-                        
+        text: "Bedroom"
+        GridLayout:
+            cols: 2
+            Label:
+                text: 'Freezer Temperature -6 C'
+            Label:
+                text: 'Sauna Temperature 47 C'
+            Label:
+                text: 'Alarm'
+            Switch:
+            Label:
+                text: 'Lock'
+            Switch:
+
+            Button:
+                text: "Back"
+                font_size: 24
+                on_press: app.root.current = "connected"
+
+
 <Olohuone>:
     name: "Livingroom"
     do_default_tab: False
@@ -121,14 +152,23 @@ ScreenManagement:
                 
 <Adminpanel>:
     name: "adminpanel"
+    Button:
+        text: "Create new user"
+        font_size: 24
+        on_release:app.root.current = "insert"
+
+
+
+<Insert>
+    name: "insert"
     BoxLayout
-        id: login_layout
+        id: insert_layout
         orientation: 'vertical'
-        padding: [10,50,10,50]
-        spacing: 50
+        padding: [10,40,10,40]
+        spacing: 40
 
         Label:
-            text: 'Insert new user'
+            text: 'Create new username and password'
             font_size: 32
 
         BoxLayout:
@@ -136,38 +176,91 @@ ScreenManagement:
 
             Label:
                 text: 'Login'
-                font_size: 18
+                font_size: 20
                 halign: 'left'
                 text_size: root.width-20, 20
 
             TextInput:
-                id: login
+                id: username
                 multiline:False
-                font_size: 28
+                font_size: 20
 
         BoxLayout:
             orientation: 'vertical'
             Label:
                 text: 'Password'
                 halign: 'left'
-                font_size: 18
+                font_size: 20
                 text_size: root.width-20, 20
 
             TextInput:
                 id: password
                 multiline:False
                 password:True
-                font_size: 28
-                
+                font_size: 20
+
         Button:
-            text: "Insert"
+            text: "Create"
             font_size: 24
-            on_press:
-                
+            on_press: root.do_insert(username.text, password.text)
+
+
+        Button:
+            text: "Change Password"
+            font_Size: 24
+            on_press: app.root.current = "changepw"
+
         Button:
             text: "Main"
             font_size: 24
             on_press: app.root.current = "connected"
-            
 
-        
+<Changepw>
+    name: "changepw"
+    BoxLayout
+        id: change_layout
+        orientation: 'vertical'
+        padding: [10,40,10,40]
+        spacing: 40
+
+        Label:
+            text: 'Insert username and new password'
+            font_size: 28
+
+        BoxLayout:
+            orientation: 'vertical'
+
+            Label:
+                text: 'Username'
+                font_size: 20
+                halign: 'left'
+                text_size: root.width-20, 20
+
+            TextInput:
+                id: username
+                multiline:False
+                font_size: 20
+
+        BoxLayout:
+            orientation: 'vertical'
+            Label:
+                text: 'New Password'
+                halign: 'left'
+                font_size: 20
+                text_size: root.width-20, 20
+
+            TextInput:
+                id: newpassword
+                multiline:False
+                password:True
+                font_size: 20
+
+        Button:
+            text: "Change"
+            font_size: 24
+            on_press: root.do_change(username.text, newpassword.text)
+
+        Button:
+            text: "Back"
+            font_size: 24
+            on_release:app.root.current = "insert"
